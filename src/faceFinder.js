@@ -13,6 +13,8 @@ function polygonArea(points) {
 
 // Sanitize input: remove self-loops, duplicate edges, and prune degree-1 dangling chains
 // Also remove vertices that become isolated; return reindexed vertices and edges
+
+// Complexity O(E + V) where E is number of edges and V is number of vertices. Worst case is a single chain of degree-1 vertices which gets fully pruned
 function sanitizeInput(vertices, edges) {
   const n = vertices.length;
   const edgeSet = new Set();
@@ -85,7 +87,11 @@ function sanitizeInput(vertices, edges) {
 
   return { vertices: newVertices, edges: remappedEdges, oldToNew, newToOld };
 }
-
+//Assuming the sanitized input has V vertices and E edges
+// The main loop visits each directed edge at most once, so O(E) for the face-walking part
+// The sorting of neighbors is O(V * d log d) where d is the degree, d log d comes from the CCW sorting. In planar cases d can be bounded?
+// The Area calculation goes over all FACEs, but there are less FACEs than edges so O(E)
+//Overall complexity is O(V*dlogd + E)
 function findFaces(vertices, edges) {
   // sanitize input and use reindexed vertices/edges
   const sanitized = sanitizeInput(vertices, edges);
