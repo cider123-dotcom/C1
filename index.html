@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Face Finder Demo</title>
+  <style>body{font-family:Arial;padding:8px} svg{border:1px solid #ccc} pre{background:#f6f6f6;padding:8px;overflow:auto}</style>
+</head>
+<body>
+  <h3>Face Finder Demo</h3>
+  <input id="file" type="file" accept="application/json" />
+  <div id="info"></div>
+  <div style="margin-top:8px">
+    <div class="panel">
+      <div class="label"><strong>Original Input (visual)</strong></div>
+      <div id="originalSvg"></div>
+    </div>
+    <div class="panel">
+      <div class="label"><strong>Sanitized Input (used for faces)</strong></div>
+      <div id="sanitizedSvg"></div>
+    </div>
+  </div>
+
+  <script src="src/faceFinder.js"></script>
+  <script>
+    function makeSvgContainer(w, h) {
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('width', w); svg.setAttribute('height', h);
+      return svg;
+    }
+
+    function renderGraph(vertices, edges, containerId, indexMap) {
+      if (!vertices || !edges) return;
+      const padding = 10;
+      const labelMargin = 24; // extra room for text labels (pixels)
+      const xs = vertices.map(p=>p[0]);
+      const ys = vertices.map(p=>p[1]);
+      const minx=Math.min(...xs), maxx=Math.max(...xs);
+      const miny=Math.min(...ys), maxy=Math.max(...ys);
+      const w = Math.max(200, (maxx-minx)*50 + padding*2 + labelMargin*2);
+      const h = Math.max(200, (maxy-miny)*50 + padding*2 + labelMargin*2);
+      const totalPad = padding + labelMargin;
+      const scaleX = (w-2*totalPad)/(maxx-minx || 1);
+      const scaleY = (h-2*totalPad)/(maxy-miny || 1);
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = makeSvgContainer(w,h);
+
+      function sx(x){ return (x-minx)*scaleX + totalPad; }
+      function sy(y){ return h - ((y-miny)*scaleY + totalPad); }
+
+      // draw edges
+      edges.forEach(e => {
+        const [u,v] = e;
+        const line = document.createElementNS(svgNS, 'line');
+        line.setAttribute('x1', sx(vertices[u][0])); line.setAttribute('y1', sy(vertices[u][1]));
+        line.setAttribute('x2', sx(vertices[v][0])); line.setAttribute('y2', sy(vertices[v][1]));
+        line.setAttribute('stroke', '#333'); line.setAttribute('stroke-width', '2');
+        svg.appendChild(line);
+      });
+
+      // draw vertices and labels (original indices if indexMap provided)
+      vertices.forEach((p,i)=>{
+        const c = document.createElementNS(svgNS,'circle');
+        c.setAttribute('cx', sx(p[0])); c.setAttribute('cy', sy(p[1]));
+        c.setAttribute('r', 3); c.setAttribute('fill', '#000');
+        svg.appendChild(c);
+
+        const label = document.createElementNS(svgNS, 'text');
+        label.setAttribute('x', sx(p[0]) + 6);
+        label.setAttribute('y', sy(p[1]) - 6);
+        label.setAttribute('font-size', '10');
+        label.setAttribute('fill', '#c00');
+        label.textContent = (indexMap && indexMap[i] !== undefined) ? indexMap[i] : i;
+        svg.appendChild(label);
+      });
+
+      const wrap = document.getElementById(containerId);
+      wrap.innerHTML = '';
+      wrap.appendChild(svg);
+    }
+
+    function renderFaces(vertices, faces, containerId, indexMap) {
+      if (!vertices || !faces) return;
+      const padding = 10;
+      const labelMargin = 24; // extra room for text labels (pixels)
+      const xs = vertices.map(p=>p[0]);
+      const ys = vertices.map(p=>p[1]);
+      const minx=Math.min(...xs), maxx=Math.max(...xs);
+      const miny=Math.min(...ys), maxy=Math.max(...ys);
+      const w = Math.max(200, (maxx-minx)*50 + padding*2 + labelMargin*2);
+      const h = Math.max(200, (maxy-miny)*50 + padding*2 + labelMargin*2);
+      const totalPad = padding + labelMargin;
+      const scaleX = (w-2*totalPad)/(maxx-minx || 1);
+      const scaleY = (h-2*totalPad)/(maxy-miny || 1);
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = makeSvgContainer(w,h);
+
+      function sx(x){ return (x-minx)*scaleX + totalPad; }
+      function sy(y){ return h - ((y-miny)*scaleY + totalPad); }
+
+      // draw faces
+      const colors = ['#ffd9d9','#d9ffd9','#d9d9ff','#fff2cc','#e6e6e6','#d9ffff'];
+      faces.forEach((f,i)=>{
+        const poly = document.createElementNS(svgNS,'polygon');
+        const pts = f.polygon.map(p=>`${sx(p[0])},${sy(p[1])}`).join(' ');
+        poly.setAttribute('points', pts);
+        poly.setAttribute('fill', colors[i % colors.length]);
+        poly.setAttribute('stroke', '#333');
+        poly.setAttribute('stroke-width', '1');
+        svg.appendChild(poly);
+      });
+
+      // draw edges
+      vertices.forEach((p,i)=>{
+        // nothing here; edges are implied by faces, but draw circles and labels
+        const c = document.createElementNS(svgNS,'circle');
+        c.setAttribute('cx', sx(p[0])); c.setAttribute('cy', sy(p[1]));
+        c.setAttribute('r', 3); c.setAttribute('fill', '#000');
+        svg.appendChild(c);
+
+        const label = document.createElementNS(svgNS, 'text');
+        label.setAttribute('x', sx(p[0]) + 6);
+        label.setAttribute('y', sy(p[1]) - 6);
+        label.setAttribute('font-size', '10');
+        label.setAttribute('fill', '#c00');
+        label.textContent = (indexMap && indexMap[i] !== undefined) ? indexMap[i] : i;
+        svg.appendChild(label);
+      });
+
+      const wrap = document.getElementById(containerId);
+      wrap.innerHTML = '';
+      wrap.appendChild(svg);
+    }
+
+    document.getElementById('file').addEventListener('change', (ev)=>{
+      const f = ev.target.files[0]; if (!f) return;
+      const rdr = new FileReader();
+      rdr.onload = ()=>{
+        try {
+          const obj = JSON.parse(rdr.result);
+          // render original graph visually
+          renderGraph(obj.vertices, obj.edges, 'originalSvg', obj.vertices.map((_,i)=>i));
+
+          // sanitize & render sanitized graph and faces
+          const sanitized = window.sanitizeInput(obj.vertices, obj.edges);
+          const faces = window.findFaces(obj.vertices, obj.edges); // findFaces sanitizes internally and returns faces for original input
+          document.getElementById('info').textContent = `Found ${faces.length} interior faces`;
+          renderFaces(sanitized.vertices, faces, 'sanitizedSvg', sanitized.newToOld);
+        } catch (e) { alert('Error: '+e.message); }
+      };
+      rdr.readAsText(f);
+    });
+  </script>
+</body>
+</html>
